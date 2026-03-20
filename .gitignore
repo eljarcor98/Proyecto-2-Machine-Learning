@@ -1,0 +1,29 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Jupyter Notebooks checkpoints
+.ipynb_checkpoints
+
+# VS Code
+.vscode/
+
+# Project configuration
+.idea/
+
+# Large data files (standard practice)
+data/processed/*.csv
+data/processed/*.json
+data/processed/*.parquet
+
+# OS files
+Thumbs.db
+Desktop.ini
+.DS_Store
