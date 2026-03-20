@@ -1,0 +1,568 @@
+T A L L E R  P R Á C T I C O
+Taller 2: ¿Puedes Predecir el
+Fútbol Mejor que las Casas de
+Apuestas?
+Machine Learning I (ML1-2026I) — Regresión Lineal,
+Logística y Feature Engineering
+Julián Zuluaga — Docente
+19 de marzo de 2026
+
+TALLER 2: ¿Puedes Predecir el Fútbol Mejor que las Casas
+de Apuestas?
+Regresión Lineal, Logística y Feature Engineering con Datos Reales de la Premier League
+2025-26
+Curso: Machine  Learning  I  (ML1-2026I)  —  Universidad  Externado  de  Colombia
+Modalidad: En parejas  Peso: 15% de la nota final  Fecha límite: Domingo 29 de
+marzo de 2026, 11:59 PM (hora Colombia, GMT-5) Entrega: Repositorio GitHub + URL
+del dashboard desplegado
+Pipeline completo: desde los datos hasta el dashboard predictivo
+1. Contexto
+La Premier League 2025-26 es la liga de fútbol más seguida del mundo. Cada partido
+genera más de 1,500 eventos registrados: pases, tiros, tackles, goles — cada uno con
+coordenadas (x, y) en una cancha normalizada de 100×100. Cada jugador tiene más
+de 40 métricas estadísticas. Y las casas de apuestas como Bet365 invierten millones
+en modelos sofisticados para predecir resultados.
+Bet365 acierta el resultado del 49.8% de los partidos esta temporada.
+2 Universidad Externado de Colombia
+Su  misión:  construir  modelos  de  Machine  Learning  que  intenten  superar  ese
+benchmark utilizando datos reales.
+Cuentan con acceso a un  API REST exclusivo para este curso con tres fuentes de
+datos:
+Fuente Datos Volumen
+WhoScored Eventos con coordenadas — pases, tiros,
+tackles, goles...
+444,252 eventos
+FPL API Stats de jugadores — xG, xA, ICT, puntos,
+precio...
+822 jugadores × 40
+campos
+football-
+data.co.uk
+Partidos, estadísticas de equipo, odds de
+apuestas
+291 partidos × 37
+campos
+Los datos cubren 30 de 38 jornadas (GW1 a GW30), con 20 equipos, 807 goles, y
+7,198 tiros registrados con coordenadas precisas.
+2. El Reto
+Construir un pipeline completo de Machine Learning con dos modelos obligatorios
+y un dashboard web desplegado públicamente.
+Modelo 1: xG — ¿Gol o No Gol? (Regresión Logística)
+El  Expected Goals (xG) es la métrica revolucionaria del fútbol moderno. Mide la
+probabilidad de que un tiro termine en gol, basándose en la posición del disparo, el
+ángulo, la distancia y las circunstancias.
+De  7,198 tiros en  la  temporada,  solo  807 terminaron en gol —  una  tasa  de
+conversión del 11.2%.
+Objetivo: Entrenar un modelo de regresión logística que prediga P(gol | tiro).
+Dataset: T odos los eventos con is_shot = true del API (7,198 registros).
+Features mínimas sugeridas (punto de partida):
+Distancia al arco:√((100 - x)² + (50 - y)²)
+Ángulo respecto al centro del arco:atan2(50 - y, 100 - x)
+¿Cabezazo? (qualifier Head)
+¿Pie derecho o izquierdo? (qualifiers RightFoot / LeftFoot)
+• 
+• 
+• 
+• 
+3 Universidad Externado de Colombia
+¿Es BigChance? (qualifier BigChance)
+¿Es penal? (qualifier Penalty)
+Zona del disparo: BoxCentre, OutOfBoxCentre, SmallBoxCentre...
+Pero hay 110 tipos de qualifiers — ¿cuáles aportan información? Eso lo descubren
+ustedes.
+Evaluación esperada del modelo:
+Accuracy, Precision, Recall, F1-Score
+Matriz de confusión
+Curva ROC y AUC
+Comparación con el baseline naive: predecir siempre "no gol" da 88.8% de
+accuracy. ¿Pueden hacer algo más inteligente que eso?
+Modelo 2: Match Predictor — ¿Quién Gana el Partido?
+Parte A — Regresión Lineal: Predecir  el  número  total  de  goles  de  un  partido
+(variable continua).
+Parte B — Regresión Logística: Predecir el resultado:  Home (H),  Draw (D) o
+Away (A) (clasificación multiclase).
+Dataset: 291 partidos con estadísticas + odds de apuestas completas.
+El benchmark a superar: Bet365 acierta el 49.8%. Si su modelo logra >50% con
+validación cruzada honesta, están haciendo algo bien.
+Features disponibles directamente en la tabla matches:
+Shots, shots on target, corners, fouls, cards (home y away)
+Odds de apuestas: Bet365, BetWay, Max, Average (12 variables de odds)
+Árbitro del partido (23 árbitros con sesgos estadísticos medibles)
+Features derivables (aquí está la verdadera diferencia):
+Agregar datos de events por equipo por partido: pass accuracy, progressive
+passes, big chances, press %, crosses...
+Historial reciente (rolling averages últimos N partidos)
+T eam strength ratings de la tabla teams
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+4 Universidad Externado de Colombia
+⚠ Advertencia: Las stats del partido (shots, SOT) describen lo que YA pasó.
+Para un predictor real, necesitarían stats de partidos ANTERIORES. El diseño de
+features es parte del reto — piensen bien qué significa "predecir".
+Dashboard Web — Desplegar la Inteligencia
+Deploy obligatorio en Netlify, Vercel, u otra plataforma pública. URL funcionando al
+momento de la calificación.
+Contenido mínimo del dashboard:
+Shot Map: Visualización de tiros en una cancha de fútbol con colores según la
+probabilidad xG predicha por su modelo
+Predictor: Interfaz donde se seleccionan 2 equipos y el modelo devuelve
+predicción (probabilidades H/D/A + goles esperados)
+Performance: Métricas de los modelos (accuracy, confusion matrix, comparación
+vs Bet365)
+EDA: Al menos 3 visualizaciones exploratorias con insights relevantes
+3. Referencia del API
+Base URL
+https://premier.72-60-245-2.sslip.io
+Pueden verificar que funciona visitando la URL en el navegador. Devuelve la
+documentación interactiva en la raíz.
+Endpoints Principales
+Endpoint Descripción
+GET / Info del API + directorio de endpoints
+GET /players Jugadores con stats
+GET /players/{id} Detalle + historial GW por GW
+1. 
+2. 
+3. 
+4. 
+5 Universidad Externado de Colombia
+Endpoint Descripción
+GET /matches Partidos con stats + odds
+GET /matches/{id}/events Eventos de un partido (~1,500)
+GET /events Eventos filtrados (cross-match)
+GET /standings T abla de posiciones
+GET /teams 20 equipos con ratings
+GET /referees Estadísticas de árbitros
+Parámetros útiles por endpoint:
+/players — ?sort=xG&position=FWD&team=Arsenal&limit=100
+/matches — ?team=Arsenal&result=H&limit=500
+/matches/{id}/events — ?event_type=Pass&team=Arsenal
+/events — ?is_shot=true&is_goal=true&team=Arsenal&limit=10000
+Endpoints de Export (Bulk Download — Recomendados)
+Para descargar datasets completos sin paginación:
+Endpoint Filas Descripción
+GET /export/players 822 CSV, pd.read_csv(url) directo
+GET /export/matches 291 CSV, stats + 12 odds features
+GET /export/events 444,252 CSV streaming, ~30s descarga
+GET /export/player_history 1,499 CSV, top 50 jugadores GW×GW
+Agregar ?format=json para obtener JSON en vez de CSV.
+• 
+• 
+• 
+• 
+6 Universidad Externado de Colombia
+Carga Rápida en Python
+import pandas as pd
+BASE = "https://premier.72-60-245-2.sslip.io"
+# Datasets completos (recomendado: descargar una vez y guardar local)
+players = pd.read_csv(f"{BASE}/export/players")
+matches = pd.read_csv(f"{BASE}/export/matches")
+events  = pd.read_csv(f"{BASE}/export/events")  # ⚠ 444K filas, ~30 seg
+# Solo tiros (más rápido que descargar 444K eventos)
+import requests
+shots_data = requests.get(f"{BASE}/events?is_shot=true&limit=10000").json()
+shots = pd.DataFrame(shots_data['events'])
+Tip: Descarguen los exports al inicio del proyecto y guárdenlos como CSV local.
+Así no dependen de la conexión al API para trabajar.
+Sistema de coordenadas de la cancha — 100×100, (0,0) esquina propia, (100,50) centro del arco rival
+El Campo qualifiers — La Mina de Oro
+Cada evento tiene un campo qualifiers que es un array JSON con metadata rica.
+Ejemplo para un tiro:
+7 Universidad Externado de Colombia
+[
+  {"type": {"displayName": "Zone"}, "value": "Center"},
+  {"type": {"displayName": "GoalMouthY"}, "value": "52.3"},
+  {"type": {"displayName": "GoalMouthZ"}, "value": "8.1"},
+  {"type": {"displayName": "BigChance"}},
+  {"type": {"displayName": "RightFoot"}},
+  {"type": {"displayName": "RegularPlay"}}
+]
+Hay 110 tipos diferentes de qualifiers en los datos. Algunos de los más relevantes:
+Qualifier Significado
+BigChance Oportunidad clara — predictor #1 de gol
+RightFoot / LeftFoot / Head Parte del cuerpo
+FastBreak Contraataque rápido
+FromCorner Generado desde corner
+Penalty Tiro penal (82.9% conversión)
+FirstTouch Tiro a primer toque
+Volley Volea
+Zone Back / Center / Left / Right
+Length Longitud del pase (metros)
+Longball Pase largo
+Cross Centro al área
+KeyPass Pase que genera un tiro
+IntentionalAssist Asistencia intencional
+Throughball Pase filtrado (creatividad)
+Parseo de qualifiers en Python:
+8 Universidad Externado de Colombia
+import json
+# Si cargaron desde CSV, qualifiers es string
+events['qualifiers_parsed'] = events['qualifiers'].apply(
+    lambda x: json.loads(x) if isinstance(x, str) else []
+)
+# Extraer features booleanas (str.contains sobre JSON)
+q = events['qualifiers']
+events['is_big_chance'] = q.str.contains(
+    'BigChance', na=False).astype(int)
+events['is_header'] = q.str.contains(
+    '"Head"', na=False).astype(int)
+events['is_right_foot'] = q.str.contains(
+    'RightFoot', na=False).astype(int)
+events['is_left_foot'] = q.str.contains(
+    'LeftFoot', na=False).astype(int)
+events['is_counter'] = q.str.contains(
+    'FastBreak', na=False).astype(int)
+events['from_corner'] = q.str.contains(
+    'FromCorner', na=False).astype(int)
+events['is_penalty'] = q.str.contains(
+    '"Penalty"', na=False).astype(int)
+events['is_volley'] = q.str.contains(
+    'Volley', na=False).astype(int)
+events['first_touch'] = q.str.contains(
+    'FirstTouch', na=False).astype(int)
+Sistema de Coordenadas
+La cancha es 100 × 100 (normalizada):
+(0, 0) = esquina izquierda de tu propio arco
+(100, 50) = centro del arco rival
+x = profundidad (0→100, de tu arco al rival)
+y = ancho (0→100, izquierda a derecha)
+end_x, end_y = destino del pase/tiro (disponible en ~66% de eventos)
+goal_mouth_y, goal_mouth_z = punto exacto donde entró al arco (solo en tiros)
+⚠ Notas Importantes del API
+Nombres  de  equipos  difieren  entre  tablas: La  tabla  matches usa  "Man
+United" y "Nott'm Forest", pero  events usa "Man Utd" y "Nottingham Forest".
+Manejen esto con un diccionario de mapeo.
+• 
+• 
+• 
+• 
+• 
+• 
+1. 
+9 Universidad Externado de Colombia
+El campo  as_ en matches es  away_shots (renombrado porque  as es palabra
+reservada en Python/SQL).
+Fechas  en  matches están  en  formato  DD/MM/YYYY,  no  ISO.  Usar
+pd.to_datetime(df['date'], format='%d/%m/%Y').
+player_history solo tiene datos de 50 jugadores (los top del Fantasy), no los 822.
+Eventos  sin  ubicación —  Cards,  Substitutions,  FormationChange,  Start,  End
+tienen x=0, y=0. Filtrarlos en cualquier análisis espacial.
+Los match IDs son internos (1 a 291), no son los IDs de WhoScored. Usar el
+endpoint /matches para obtener la lista.
+Criterios de evaluación y pesos del T aller 2
+4. Rúbrica de Evaluación
+Criterios Principales (sobre 5.0)
+1. EDA + Feature Engineering (20%)
+5.0 Excelente 3.5–4.9 Bueno 2.0–3.4 Aceptable<
+2.0
+EDA profundo con insights
+accionables. Features
+EDA adecuado con
+visualizaciones.
+EDA básico
+(describe,
+Sin
+EDA
+2. 
+3. 
+4. 
+5. 
+6. 
+10 Universidad Externado de Colombia
+5.0 Excelente 3.5–4.9 Bueno 2.0–3.4 Aceptable<
+2.0
+creativas de events/
+qualifiers con justificación
+estadística
+Algunas features
+derivadas
+histogramas). Solo
+features directas
+2. Modelo xG — Regresión Logística (25%)
+5.0 Excelente 3.5–4.9 Bueno 2.0–3.4
+Aceptable < 2.0
+Features bien
+seleccionadas. Métricas
+completas (accuracy,
+precision, recall, F1, AUC).
+Supera baseline naive
+Modelo funcional.
+Al menos accuracy,
+confusion matrix y
+una métrica
+adicional
+Modelo entrenado
+pero pocas
+features o métricas
+incompletas
+No
+funciona
+3. Match Predictor — Lineal + Logística (25%)
+5.0 Excelente 3.5–4.9 Bueno 2.0–3.4
+Aceptable < 2.0
+Ambas regresiones con
+cross-validation.
+Comparación vs Bet365
+(49.8%). Análisis de
+residuos
+Ambas regresiones
+funcionales con
+métricas. Mencionan
+benchmark
+Solo una
+regresión, o sin
+validación
+cruzada
+Falta
+modelo
+4. Dashboard Web (20%)
+5.0 Excelente 3.5–4.9 Bueno 2.0–3.4
+Aceptable < 2.0
+Diseño profesional. Shot
+map en cancha. Predictor
+interactivo. UX
+responsive
+Dashboard funcional
+con 4 secciones
+mínimas. Diseño
+aceptable
+Básico, faltan
+secciones o
+diseño descuidado
+URL no
+funciona
+5. Código + Reproducibilidad (10%)
+11 Universidad Externado de Colombia
+5.0 Excelente 3.5–4.9 Bueno 2.0–3.4
+Aceptable < 2.0
+Código limpio, comentado.
+README completo. 
+requirements.txt
+Código
+organizado, lógica
+comprensible
+Funciona pero
+desorganizado
+No
+ejecutable
+Bonificaciones (máximo +1.0 sobre 5.0)
+Modelos avanzados (+0.5): Implementar Random Forest, XGBoost, SVM o Neural
+Network  Y comparar cuantitativamente vs regresión logística baseline. No basta
+con importar — deben analizar si mejora y por qué.
+Dashboard excepcional (+0.5): Visualizaciones interactivas avanzadas, pitch plots,
+animaciones, filtros dinámicos, diseño profesional.
+Feature engineering creativo (+0.3): Features originales bien justificadas: press
+%, progressive passes, rolling averages, Expected Threat (xT) o métricas custom.
+Clustering  (+0.3): Segmentación  de  jugadores/equipos/partidos  con  K-Means,
+DBSCAN o jerárquico. Visualización e interpretación futbolística.
+La nota máxima posible es 6.0/5.0 (5.0 base + 1.0 de bonos).
+5. Formato de Entrega
+¿Qué entregar?
+1. Repositorio GitHub (público o con acceso concedido al profesor)
+Notebook(s) .ipynb con EDA completo + entrenamiento de modelos
+Código fuente del dashboard
+README.md con: 
+Nombres completos y códigos de los integrantes
+URL del dashboard desplegado
+Descripción breve del approach y features utilizadas
+Instrucciones para ejecutar los notebooks
+requirements.txt con dependencias
+• 
+• 
+• 
+◦ 
+◦ 
+◦ 
+◦ 
+• 
+12 Universidad Externado de Colombia
+2.  URL  del  Dashboard funcionando  en  Netlify,  Vercel,  Streamlit  Cloud,  u  otra
+plataforma
+Debe estar activo al momento de la calificación
+Si la URL se cae, se califica con lo disponible en el repositorio
+3. Formulario de entrega (se compartirá por T eams)
+Link del repositorio
+URL del dashboard
+Nombres de integrantes
+Fecha Límite
+Domingo 29 de marzo de 2026, 11:59 PM (hora Colombia, GMT-5)
+Penalizaciones por Entrega Tardía
+Retraso Penalización
+0 – 12 horas -0.5 sobre la nota final
+12 – 24 horas -1.0 sobre la nota final
+24 – 48 horas -1.5 sobre la nota final
+Más de 48 horas No se recibe
+La hora de entrega se determina por el más tardío entre: el último commit en
+el repositorio Y el momento de envío del formulario.
+Política de Integridad Académica
+El trabajo es en parejas. Ambos integrantes deben poder explicar cualquier parte
+del código si se les pregunta.
+Pueden usar herramientas de IA (ChatGPT, Copilot, Claude) como apoyo, pero
+el diseño de features, la selección de modelos y la interpretación de resultados
+deben demostrar comprensión propia.
+Si dos equipos entregan código sustancialmente idéntico (más allá de lo que
+provee este enunciado), ambos equipos reciben 0.0.
+Se valora la originalidad del approach, no reproducir tutoriales.
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+13 Universidad Externado de Colombia
+6. Tips y Consejos
+Sobre los Datos
+1. Empiecen por los exports. Un  pd.read_csv(f"{BASE}/export/matches") les da el
+dataset completo listo para trabajar. No se compliquen con paginación en la primera
+exploración.
+2. Guarden los datos localmente. Descarguen los CSVs una vez y trabajen offline.
+Así no dependen de la conexión al API y pueden iterar más rápido.
+3. Los 291 partidos son pocos para ML. Con datasets pequeños, cross-validation
+(k-fold,  k  ≥  5)  es  obligatorio.  Un  solo  train/test  split  les  puede  dar  resultados
+engañosos.
+4. La mina de oro son los qualifiers. Los equipos que parseen los qualifiers JSON y
+extraigan  features  como  BigChance  rate,  cross  accuracy,  pass  length  distribution,
+pressing  intensity...  tendrán  una  ventaja  significativa  sobre  quienes  solo  usen
+columnas directas.
+Sobre los Modelos
+5.  El  baseline  con  solo  odds  ya  da  ~50%. Las  odds  de  Bet365  codifican
+información valiosa. La pregunta interesante es: ¿qué features  agregan valor por
+encima de las odds? Ahí está el reto real.
+6. Los empates son el enemigo. El 26.1% de los partidos terminan en Draw y son
+casi imposibles de predecir con datos. Consideren: ¿es mejor predecir 3 clases (H/D/A)
+o simplificar a 2 (HomeWin / NotHomeWin)?
+7. El desbalance de clases en xG es real. Solo el 11.2% de los tiros son gol. Un
+modelo que diga "nunca es gol" tiene 88.8% de accuracy pero es inútil. Usen métricas
+como Precision, Recall, AUC y piensen en umbrales de decisión.
+8. Regularización importa. Con pocas muestras y muchas features, overfitting es
+un  riesgo  real.  Usen  LogisticRegression(penalty='l2', C=...) o  Ridge/ Lasso para
+regresión lineal.
+9. ⚠ Cuidado con data leakage. Si usan stats del partido (shots, SOT) para predecir
+el resultado de ese mismo partido, están haciendo trampa — esos datos solo existen
+después del partido. Para un predictor honesto, usen datos de partidos anteriores.
+Sobre el Dashboard
+10. Prioricen funcionalidad sobre estética. Un dashboard deployed con modelos
+funcionando vale más que un mockup bonito sin ML detrás.
+14 Universidad Externado de Colombia
+11. Pre-computen las predicciones. No necesitan correr el modelo en vivo en el
+servidor. Pueden generar un JSON con todas las predicciones y servirlo como archivo
+estático.
+12.  Un  shot  map  en  cancha  impresiona. Librerías  como  mplsoccer (Python)
+generan visualizaciones profesionales de cancha. Para la web, pueden pre-generar las
+imágenes o usar JavaScript con Canvas/SVG.
+Sobre el Deploy
+13. Netlify/Vercel sirven contenido estático gratis. Pueden generar su dashboard
+como HTML + CSS + JS + archivos JSON con datos, y hacer deploy sin necesidad de
+backend.
+14. Streamlit Cloud es otra opción si prefieren quedarse en Python. Más simple de
+deployar, pero un dashboard HTML/JS custom bien hecho demuestra mayor habilidad
+técnica.
+15. Alternativas avanzadas: FastAPI/Flask como backend + React/Svelte/Vue como
+frontend. Más complejo pero impresionante si lo logran.
+7. Datos de Referencia Rápidos
+Para que tengan contexto al explorar los datos:
+Métrica Valor
+Partidos jugados 291 / 380
+Goles totales 807 (2.77 por partido)
+Home wins 42.3%
+Draws 26.1%
+Away wins 31.6%
+Over 2.5 goals 54.0%
+Shot conversion 11.2%
+BigChance conversion 36.6%
+Penalty conversion 82.9%
+15 Universidad Externado de Colombia
+Métrica Valor
+Goles 2do tiempo 56.3%
+Tipos de eventos 39
+Tipos de qualifiers 110
+Bet365 accuracy 49.8% ← su benchmark
+8. Bibliografía y Recursos
+Referencias Académicas
+Dixon,  M.  &  Coles,  S. (1997).  Modelling  association  football  scores  and
+inefficiencies in the football betting market. Journal of the Royal Statistical Society:
+Series C, 46(2), 265-280.
+Maher, M. (1982).  Modelling association football scores. Statistica Neerlandica,
+36(3), 109-118.
+Brechot, Q. & Flepp, R. (2020). Dealing with randomness in match outcomes:
+How to rethink performance evaluation in European club football using expected
+goals. Journal of Sports Economics, 21(5), 479-500.
+Rathke, A. (2017).  An  examination  of  expected  goals  and  shot  efficiency  in
+soccer. Journal of Human Sport and Exercise, 12(2proc), S514-S529.
+Recursos Técnicos
+Soccermatics —  David  Sumpter.  Libro  y  código  Python  sobre  modelos
+matemáticos  en  fútbol.  Capítulos  sobre  xG,  passing  networks  y  modelos
+predictivos.
+Friends of Tracking — Canal de YouT ube con tutoriales de football analytics por
+académicos.  Incluye  implementaciones  de  xG,  pitch  control  y  tracking  data.
+youtube.com/@friendsoftracking755
+StatsBomb Open Data — Datos event-level gratuitos para practicar análisis.
+Formato similar al de WhoScored. github.com/statsbomb/open-data
+Expected Goals Philosophy — James Tippett. Introducción accesible al concepto
+de xG y su impacto en el análisis del fútbol moderno.
+1. 
+2. 
+3. 
+4. 
+1. 
+2. 
+3. 
+4. 
+16 Universidad Externado de Colombia
+Documentación de Librerías
+scikit-learn —  Regresión  lineal,  logística,  métricas,  cross-validation.  scikit-
+learn.org/stable/user_guide.html
+mplsoccer —  Visualizaciones  profesionales  de  cancha:  shot  maps,  heatmaps,
+pass networks. mplsoccer.readthedocs.io
+Plotly — Gráficos interactivos ideales para dashboards web. plotly.com/python/
+pandas — Manipulación de datos tabular. pandas.pydata.org/docs/
+Librerías Recomendadas (pip install)
+Librería Uso
+pandas, numpy Manipulación de datos
+scikit-learn Modelos, métricas, cross-validation
+matplotlib, seaborn Visualizaciones estáticas
+mplsoccer Pitch plots, shot maps
+plotly Gráficos interactivos para web
+requests Consumir el API
+9. Preguntas Frecuentes
+¿Podemos usar datos externos además del API? Sí, pueden enriquecer con datos
+de FBref, Transfermarkt, Understat u otras fuentes, siempre que documenten la fuente
+en el README. Pero los modelos base deben usar datos del API.
+¿El  dashboard  tiene  que  ser  interactivo? Lo  mínimo  es  que  muestre  las
+visualizaciones y resultados estáticos. La interactividad (seleccionar equipos, filtrar
+datos, tooltips) es bonus.
+¿Qué pasa si el API se cae? Descarguen los exports al inicio y trabajen con CSVs
+locales. Esa es su copia de seguridad.
+1. 
+2. 
+3. 
+4. 
+17 Universidad Externado de Colombia
+¿Podemos  usar  AutoML  (H2O,  AutoSklearn)? No  para  los  modelos  base.  La
+regresión lineal y logística deben implementarse con scikit-learn de forma explícita
+para demostrar comprensión. Para los  bonos de modelos avanzados, pueden usar
+cualquier herramienta.
+¿Podemos ser 3 en el grupo? No. Máximo 2 personas. Si el número de estudiantes
+es impar, habrá un grupo de 1 con consideración en la calificación proporcional.
+¿El modelo tiene que correr en vivo en el dashboard? No. Pueden pre-computar
+todas las predicciones, guardarlas como JSON/CSV, y que el dashboard simplemente
+las muestre. Esto simplifica enormemente el deploy.
+"El fútbol es un juego simple complicado por los que intentan hacerlo complejo."
+— Johan Cruyff
+"El Machine Learning es un juego complejo simplificado por los que entienden
+sus datos." — ML1-2026I
+Éxitos. Que gane el mejor modelo. 
+18 Universidad Externado de Colombia
