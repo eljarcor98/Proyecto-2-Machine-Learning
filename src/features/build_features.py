@@ -44,7 +44,17 @@ def build_features():
     df_shots['is_left_foot'] = qs.apply(lambda x: 'LeftFoot' in x).astype(int)
     df_shots['is_counter'] = qs.apply(lambda x: 'FastBreak' in x).astype(int)
     df_shots['is_from_corner'] = qs.apply(lambda x: 'FromCorner' in x).astype(int)
+    df_shots['is_volley'] = qs.apply(lambda x: 'Volley' in x).astype(int)
+    df_shots['is_first_touch'] = qs.apply(lambda x: 'FirstTouch' in x).astype(int)
     
+    # 3. Integrar con Players Data (ICT Index)
+    players_path = 'data/players.csv'
+    if os.path.exists(players_path):
+        df_p = pd.read_csv(players_path)
+        # Seleccionar solo columnas útiles de players
+        df_p = df_p[['id', 'ict_index', 'xG']].rename(columns={'id': 'player_id', 'ict_index': 'player_ict', 'xG': 'player_season_xG'})
+        df_shots = df_shots.merge(df_p, on='player_id', how='left')
+
     # Extraer zona (si existe)
     df_shots['shot_zone'] = qs.apply(lambda x: x.get('Zone', 'Unknown'))
 
@@ -54,11 +64,12 @@ def build_features():
         os.makedirs(output_dir)
         
     output_path = os.path.join(output_dir, 'shots_features.csv')
-    # Columnas finales para el modelo xG
+    # Columnas finales actualizadas
     final_cols = [
-        'id', 'match_id', 'player_id', 'team_name', 'x', 'y', 'distance', 'angle',
+        'id', 'match_id', 'player_id', 'team_name', 'distance', 'angle',
         'is_header', 'is_right_foot', 'is_left_foot', 'is_big_chance', 
-        'is_penalty', 'is_counter', 'is_from_corner', 'shot_zone', 'is_goal'
+        'is_penalty', 'is_counter', 'is_from_corner', 'is_volley', 
+        'is_first_touch', 'player_ict', 'player_season_xG', 'shot_zone', 'is_goal'
     ]
     df_shots[final_cols].to_csv(output_path, index=False)
     print(f"Dataset procesado guardado en: {output_path}")
