@@ -59,8 +59,10 @@ body {
 
 .content-grid {
   display: grid;
-  grid-template-columns: 280px minmax(0, 1fr) 380px;
-  gap: 18px;
+  grid-template-columns: 240px minmax(0, 1fr) 300px;
+  gap: 15px;
+  max-width: 1950px;
+  margin: 0 auto;
 }
 
 .panel {
@@ -341,7 +343,7 @@ input[type="checkbox"] {
 
 .center-panels {
   display: grid;
-  grid-template-columns: minmax(0, 1.9fr) minmax(280px, 0.9fr);
+  grid-template-columns: minmax(0, 2.4fr) minmax(280px, 0.8fr);
   gap: 18px;
 }
 
@@ -490,3 +492,21 @@ input[type="checkbox"] {
     text-align: center;
   }
 }
+
+.radio-group {
+  padding: 10px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.radio-group label {
+  color: #f8f4ea;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.radio-group input {
+  margin-right: 10px;
+}
+
