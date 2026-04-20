@@ -1,10 +1,11 @@
-import requests
-import os
 import time
+from pathlib import Path
+
+import requests
 
 BASE = "https://premier.72-60-245-2.sslip.io"
-DATA_DIR = r"c:\Users\Arnold's\Documents\Repositorios Machine Learning\Proyecto 2 Machine Learning\data\raw"
-FILE_PATH = os.path.join(DATA_DIR, "events.csv")
+DATA_DIR = Path(__file__).resolve().parents[1] / "data" / "raw"
+FILE_PATH = DATA_DIR / "events.csv"
 URL = f"{BASE}/export/events"
 
 def download_large_file(url, path):
@@ -25,8 +26,7 @@ def download_large_file(url, path):
     return False
 
 if __name__ == "__main__":
-    if not os.path.exists(DATA_DIR):
-        os.makedirs(DATA_DIR)
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
     
     success = download_large_file(URL, FILE_PATH)
     if not success:
