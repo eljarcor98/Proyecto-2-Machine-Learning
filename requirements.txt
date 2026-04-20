@@ -1,9 +1,13 @@
-pandas
 numpy
+pandas
 scikit-learn
+scipy
 matplotlib
 seaborn
-jupyter
-requests
-streamlit
 plotly
+streamlit
+dash
+jupyter
+notebook
+requests
+pypdf

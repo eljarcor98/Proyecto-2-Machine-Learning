@@ -1,8 +1,9 @@
+from pathlib import Path
+
 import requests
-import os
 
 BASE = "https://premier.72-60-245-2.sslip.io"
-DATA_DIR = r"c:\Users\Arnold's\Documents\Repositorios Machine Learning\Proyecto 2 Machine Learning\data\raw"
+DATA_DIR = Path(__file__).resolve().parents[1] / "data" / "raw"
 
 endpoints = {
     "players.csv": f"{BASE}/export/players",
@@ -11,8 +12,7 @@ endpoints = {
     "player_history.csv": f"{BASE}/export/player_history"
 }
 
-if not os.path.exists(DATA_DIR):
-    os.makedirs(DATA_DIR)
+DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 for filename, url in endpoints.items():
     print(f"Downloading {url}...")
@@ -20,7 +20,7 @@ for filename, url in endpoints.items():
         response = requests.get(url, stream=True)
         response.raise_for_status()
         
-        path = os.path.join(DATA_DIR, filename)
+        path = DATA_DIR / filename
         with open(path, "wb") as f:
             for chunk in response.iter_content(chunk_size=8192):
                 f.write(chunk)
