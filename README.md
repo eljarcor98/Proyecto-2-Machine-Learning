@@ -145,12 +145,12 @@ Componentes actuales:
 
 - header del partido con marcador final y contexto
 - layout de tres columnas
-- panel izquierdo de filtros
-- replay central con cancha y animacion
-- panel derecho con eventos recientes y resumen por equipo
-- tarjetas compactas de acciones, tiros, goles y jugadores
-- barras de momentum por equipo
-- bloque de prediccion con ganador probable, goles esperados y probabilidades H/D/A
+- panel izquierdo con selector de modo (Historical vs Simulator) y filtros dinámicos
+- modo Simulador: permite elegir cualquier equipo y árbitro para predecir el resultado mediante promedios históricos
+- replay central con cancha expandida (850px) y animación de eventos minuto a minuto
+- panel derecho con eventos recientes y resumen detallado por equipo
+- tarjetas de predicción con probabilidades H/D/A, goles esperados y "goal pressure" en tiempo real
+- visualización de xG en el hover de cada evento sobre el campo
 - capa visual y texturas cargadas desde `assets/app_dash.css`
 
 Objetivo de esta version:

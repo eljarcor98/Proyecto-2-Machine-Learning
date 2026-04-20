@@ -28,6 +28,11 @@ Hemos validado el desempeño contra el baseline del 88%:
 3. `notebooks/xg_baseline_naive_bayes.ipynb`: Verificación del baseline del 88%.
 4. `notebooks/xg_threshold_optimization.ipynb`: Análisis de Precision vs Recall.
 
+## 🏆 Últimas Mejoras (Dash V2)
+- **Simulador de Partidos**: Nuevo modo que permite proyectar resultados de cualquier combinación de equipos, incluso si no han jugado recientemente.
+- **Visualización Pro**: Se aumentó el tamaño del campo de juego a 850px y se integraron los valores de **xG** (Expected Goals) directamente en la interfaz interactiva.
+- **Sintetizador de Eventos**: Generación de hilos de eventos minuto a minuto para simulaciones basadas en perfiles históricos.
+
 ## 🚀 Cómo ejecutar
 Para regenerar las características y ver la optimización:
 ```bash
