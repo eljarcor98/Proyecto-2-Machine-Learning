@@ -1,6 +1,23 @@
 # Premier League Match Lab
 
-Proyecto 2 de Machine Learning enfocado en analisis de partidos de Premier League, modelado de xG por tiro y prediccion del resultado de un partido.
+Proyecto 2 de Machine Learning enfocado en análisis de partidos de Premier League, modelado de xG por tiro y predicción del resultado de un partido.
+
+Este proyecto se enfoca en el análisis y modelado de datos de la Premier League para el **Taller 2 de Machine Learning I (2026-I)** de la Universidad Externado de Colombia. El objetivo principal es superar el benchmark de precisión de **Bet365 (49.8%)** utilizando modelos de aprendizaje automático basados en eventos reales de la temporada 2025-26.
+
+## 🎯 Objetivos del Proyecto
+
+1.  **Modelo 1: xG (Expected Goals)** - Regresión Logística para predecir la probabilidad de que un tiro termine en gol (`P(gol | tiro)`).
+2.  **Modelo 2: Match Predictor**
+    -   **Parte A (Regresión Lineal)**: Predecir el número total de goles de un partido.
+    -   **Parte B (Regresión Logística)**: Clasificación multiclase para predecir el resultado (Home, Draw, Away).
+3.  **Dashboard Interactivo**: Visualización de mapas de tiros (Shot Maps), predictor de partidos y análisis exploratorio (EDA).
+
+## 📊 Datos y API
+
+Los datos provienen del [API de la Premier League](https://premier.72-60-245-2.sslip.io/).
+-   **Jugadores**: Estadísticas de 822 jugadores.
+-   **Partidos**: Datos de 291 partidos (de 380) con cuotas de apuestas integradas.
+-   **Eventos**: Más de 444,252 eventos detallados (pases, tiros, tarjetas, etc.) con coordenadas `(x, y)`.
 
 El repositorio ahora separa dos problemas distintos:
 
@@ -30,7 +47,7 @@ Seguir el lineamiento del taller y construir un dashboard reproducible que permi
 
 ### 1. Feature engineering de tiros
 
-Desde `data/raw/events.csv` se construye `data/processed/shots_features.csv` usando [src/features/build_features.py](/c:/Users/Arnold's/Documents/Repositorios%20Machine%20Learning/Proyecto%202%20Machine%20Learning/src/features/build_features.py).
+Desde `data/raw/events.csv` se construye `data/processed/shots_features.csv` usando [src/features/build_features.py](src/features/build_features.py).
 
 Variables disponibles para xG:
 
@@ -90,8 +107,8 @@ Benchmark actual considerado:
 
 El proyecto ahora tiene dos frontends:
 
-- `V1 Streamlit` en [src/dashboard_premier_league.py](/c:/Users/Arnold's/Documents/Repositorios%20Machine%20Learning/Proyecto%202%20Machine%20Learning/src/dashboard_premier_league.py)
-- `V2 Dash` en [src/app_dash.py](/c:/Users/Arnold's/Documents/Repositorios%20Machine%20Learning/Proyecto%202%20Machine%20Learning/src/app_dash.py)
+- `V1 Streamlit` en [src/dashboard_premier_league.py](src/dashboard_premier_league.py)
+- `V2 Dash` en [src/app_dash.py](src/app_dash.py)
 
 ### V1 Streamlit
 
@@ -131,12 +148,6 @@ Permite:
 - reproducir secuencias de acciones sobre el campo
 - ver trayectorias usando `x, y, end_x, end_y`
 
-Importante:
-
-- esta vista anima eventos y trayectorias
-- no reconstruye tracking continuo de los 22 jugadores
-- para movimiento real frame a frame haria falta `tracking data`
-
 ### V2 Dash
 
 La nueva interfaz en Dash esta inspirada en una experiencia tipo sportsbook y apunta a una navegacion mas limpia y visual.
@@ -152,12 +163,6 @@ Componentes actuales:
 - tarjetas de predicción con probabilidades H/D/A, goles esperados y "goal pressure" en tiempo real
 - visualización de xG en el hover de cada evento sobre el campo
 - capa visual y texturas cargadas desde `assets/app_dash.css`
-
-Objetivo de esta version:
-
-- ofrecer una interfaz mas cercana a producto
-- mejorar la lectura de partido respecto a la V1
-- servir como base para una futura interfaz mas avanzada
 
 ## Estructura del repositorio
 
@@ -196,127 +201,20 @@ src/
     build_features.py
 ```
 
-## Instalacion
+## Instalación y Reproducibilidad
 
-### 1. Crear entorno virtual
+1.  **Instalar dependencias**:
+    ```bash
+    pip install -r requirements.txt
+    ```
+2.  **Descargar Datos**: Ejecutar el script `scripts/download_csvs.py` (actualizado para entornos Linux) para obtener los datasets completos localmente.
+3.  **Explorar Notebooks**: Los análisis se encuentran en la carpeta `notebooks/`.
 
-En PowerShell:
+## 🛠️ Avances Recientes (Marzo 2026)
+- ✅ Organización inicial del repositorio.
+- ✅ Integración de Git LFS para manejo de datasets pesados (212MB+ de eventos).
+- ✅ Extracción de requerimientos directamente desde el PDF del taller.
+- ✅ Corrección de rutas de acceso a datos para compatibilidad multiplataforma.
 
-```powershell
-python -m venv .venv
-.venv\Scripts\Activate.ps1
-```
-
-### 2. Instalar dependencias
-
-```powershell
-pip install -r requirements.txt
-```
-
-Si estas usando el `.venv` manualmente y quieres asegurarte de instalar en ese entorno exacto:
-
-```powershell
-.venv\Scripts\python.exe -m pip install -r requirements.txt
-```
-
-## Como abrir el dashboard
-
-### Opcion 1: Streamlit V1
-
-Desde la raiz del proyecto ejecuta:
-
-```powershell
-streamlit run src/dashboard_premier_league.py
-```
-
-Normalmente Streamlit abre el navegador automaticamente. Si no lo hace, copia en tu navegador la URL local que aparezca en consola, usualmente:
-
-```text
-http://localhost:8501
-```
-
-### Opcion 2: Dash V2
-
-Desde la raiz del proyecto ejecuta:
-
-```powershell
-python src/app_dash.py
-```
-
-Luego abre:
-
-```text
-http://127.0.0.1:8050
-```
-
-Si la interfaz aparece sin estilos, reinicia la app y recarga el navegador con `Ctrl + F5`. La V2 depende de `assets/app_dash.css`.
-
-## Flujo recomendado para correr todo desde cero
-
-1. Activar el entorno virtual.
-2. Instalar dependencias.
-3. Regenerar features de tiros si hace falta.
-4. Lanzar el dashboard.
-
-```powershell
-python src/features/build_features.py
-streamlit run src/dashboard_premier_league.py
-```
-
-O si quieres abrir la interfaz nueva:
-
-```powershell
-python src/features/build_features.py
-python src/app_dash.py
-```
-
-## Scripts utiles
-
-- `python src/features/build_features.py`
-  reconstruye `shots_features.csv`
-
-- `python scripts/download_csvs.py`
-  descarga archivos tabulares desde el export del proyecto a `data/raw`
-
-- `python scripts/download_events.py`
-  descarga `events.csv` con reintentos y escritura por bloques
-
-- `python src/train_goal_prediction.py`
-  prueba la regresion lineal base para goles
-
-- `python src/train_model.py`
-  prueba un flujo base de clasificacion sobre partidos
-
-- `python scripts/optimize_threshold.py`
-  explora umbrales para el modelo lineal de xG
-
-- `python src/app_dash.py`
-  abre la version 2 del dashboard en Dash
-
-## Metodologia y criterio del taller
-
-El proyecto toma como referencia el documento `data/taller2-ml1-premier-league.pdf`.
-
-Puntos clave adoptados:
-
-- separar claramente problemas de tiros y de partidos
-- no evaluar solo con accuracy cuando hay clases desbalanceadas
-- usar validacion honesta con multiples segmentos
-- comparar contra benchmark de apuestas
-- reportar metricas interpretables dentro del dashboard
-
-## Notas
-
-- `xG logistic` y `xG linear` resuelven el problema `gol / no gol` por tiro
-- el `Match Predictor` resuelve un problema distinto: comportamiento global del partido
-- el predictor de partido actual ya usa odds y arbitro, pero aun se puede mejorar con rolling averages y features agregadas de `events`
-- el `Match Replay` usa eventos reales del feed, por lo que funciona muy bien para secuencias y patrones, pero no reemplaza tracking data
-- `Dash V2` y `Streamlit V1` conviven; la primera busca mejor UX y la segunda concentra el laboratorio completo actual
-
-## Proximos pasos sugeridos
-
-- mejorar el modelo lineal de `total_goals`
-- agregar rolling features por equipo
-- agregar features agregadas por partido desde `events`
-- validar con cross-validation adicional para el predictor de partido
-- documentar resultados finales en notebook o reporte
+---
+*Organizado por Antigravity AI.*
