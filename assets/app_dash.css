@@ -59,7 +59,7 @@ body {
 
 .content-grid {
   display: grid;
-  grid-template-columns: 240px minmax(0, 1fr) 300px;
+  grid-template-columns: 220px minmax(0, 1fr) 280px;
   gap: 15px;
   max-width: 1950px;
   margin: 0 auto;
@@ -342,8 +342,8 @@ input[type="checkbox"] {
 }
 
 .center-panels {
-  display: grid;
-  grid-template-columns: minmax(0, 2.4fr) minmax(280px, 0.8fr);
+  display: flex;
+  flex-direction: column;
   gap: 18px;
 }
 
@@ -367,7 +367,7 @@ input[type="checkbox"] {
 
 .summary-cards {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(4, 1fr);
   gap: 14px;
 }
 
@@ -405,7 +405,7 @@ input[type="checkbox"] {
 
 .momentum-row {
   display: grid;
-  grid-template-columns: 1fr 1.5fr auto;
+  grid-template-columns: 180px 1fr auto;
   gap: 10px;
   align-items: center;
 }
@@ -508,5 +508,199 @@ input[type="checkbox"] {
 
 .radio-group input {
   margin-right: 10px;
+}
+
+/* Nuevos Estilos para Métricas de Modelo V2 */
+.metrics-card {
+  background:
+    radial-gradient(circle at top right, rgba(0, 214, 160, 0.12), transparent 35%),
+    linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02)) !important;
+  border-color: rgba(0, 214, 160, 0.25) !important;
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.metric-col {
+  display: flex;
+  flex-direction: column;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.04);
+}
+
+.metric-tag {
+  font-size: 10px;
+  text-transform: uppercase;
+  color: #8da2bd;
+  margin-bottom: 4px;
+  font-weight: 700;
+}
+
+.metric-val {
+  font-size: 16px;
+  font-weight: 800;
+  color: #06d6a0;
+}
+
+.metric-subval {
+  font-size: 11px;
+  color: #95a3b8;
+  margin-top: 2px;
+}
+
+#xg-timeline-graph {
+  background: transparent !important;
+}
+
+#timeline-container {
+  padding-bottom: 5px;
+}
+
+#timeline-container .panel-title {
+  color: #06d6a0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#timeline-container .panel-title::before {
+  content: "";
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background: #06d6a0;
+  border-radius: 50%;
+  box-shadow: 0 0 10px #06d6a0;
+}
+
+.prediction-strip {
+  grid-template-columns: 0.9fr 0.7fr 1.1fr 1.3fr !important;
+  gap: 12px;
+}
+
+/* Colapsables y Menús */
+.control-group {
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 8px;
+  margin-bottom: 12px;
+  overflow: hidden;
+  background: rgba(15, 23, 35, 0.4);
+}
+
+.group-header {
+  padding: 10px 14px;
+  background: rgba(255,255,255,0.03);
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 700;
+  font-size: 13px;
+  color: #06d6a0;
+  transition: background 0.2s;
+}
+
+.group-header:hover {
+  background: rgba(255,255,255,0.06);
+}
+
+.group-content {
+  padding: 12px;
+}
+
+/* Tooltips */
+.info-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  background: rgba(255,255,255,0.1);
+  color: #8da2bd;
+  border-radius: 50%;
+  font-size: 10px;
+  margin-left: 6px;
+  cursor: help;
+  font-weight: normal;
+}
+
+/* Ajustes de Contenedores */
+.compact-panel {
+  padding: 12px !important;
+}
+
+.center-stage {
+  gap: 12px !important;
+}
+
+.panel-title {
+  margin-bottom: 12px !important;
+}
+
+#replay-graph {
+  height: 700px !important;
+}
+
+/* Tooltips de Diálogo Premium */
+.metric-col {
+  position: relative;
+  cursor: help;
+}
+
+.metric-col::after {
+  content: attr(data-description);
+  position: absolute;
+  bottom: 110%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(15, 23, 35, 0.95);
+  color: #f8f4ea;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 11px;
+  width: 180px;
+  text-align: center;
+  border: 1px solid rgba(6, 214, 160, 0.4);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  backdrop-filter: blur(8px);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s, transform 0.2s;
+  z-index: 1000;
+  font-weight: normal;
+  line-height: 1.4;
+}
+
+.metric-col:hover::after {
+  opacity: 1;
+  transform: translateX(-50%) translateY(-5px);
+}
+
+/* Compactación de Gráficos */
+#timeline-container {
+  padding-bottom: 0px !important;
+  margin-bottom: 0px !important;
+}
+
+#timeline-container .panel-title {
+  margin-bottom: 4px !important;
+}
+
+.timeline-graph {
+  margin-top: -10px !important;
+}
+
+.replay-graph {
+  margin-top: -15px !important;
+}
+
+.compact-panel {
+  padding: 8px 12px !important;
 }
 

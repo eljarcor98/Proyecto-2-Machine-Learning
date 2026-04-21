@@ -29,7 +29,7 @@ XG_FEATURES = ["distance", "angle", "is_header", "is_big_chance", "is_penalty", 
 XG_EXTRA = ["is_right_foot", "is_left_foot", "is_from_corner", "is_volley", "is_first_touch"]
 XG_MODEL_FEATURES = XG_FEATURES + XG_EXTRA
 
-DEFAULT_EVENT_TYPES = ["Pass", "TakeOn", "SavedShot", "MissedShots", "BallRecovery", "Tackle"]
+DEFAULT_EVENT_TYPES = ["Pass", "TakeOn", "SavedShot", "MissedShots", "Goal", "ShotOnPost", "BallRecovery", "Tackle"]
 TEAM_COLORS = ["#ffd166", "#4cc9f0", "#ef476f", "#06d6a0"]
 
 
@@ -57,6 +57,7 @@ def load_events() -> pd.DataFrame:
         "end_y",
         "is_shot",
         "is_goal",
+        "qualifiers",
     ]
     events = pd.read_csv(RAW_DIR / "events.csv", usecols=usecols)
     events = events.dropna(subset=["x", "y"]).copy()
@@ -117,6 +118,37 @@ def load_events() -> pd.DataFrame:
     
     events = events.sort_values(["match_id", "clock_seconds", "id"]).reset_index(drop=True)
     return events
+
+
+import json
+
+def extract_xg_features(row):
+    """Extrae las 11 features binarias de la columna qualifiers."""
+    q_str = row.get("qualifiers", "[]")
+    if not isinstance(q_str, str) or q_str == "[]":
+        return pd.Series([0] * len(XG_MODEL_FEATURES), index=XG_MODEL_FEATURES)
+    
+    try:
+        # Reemplazar comillas simples para JSON válido
+        q_list = json.loads(q_str.replace("'", '"'))
+        q_names = {q.get("type", {}).get("displayName", q.get("type", "")): True for q in q_list}
+        
+        feats = {
+            "distance": row["distance"],
+            "angle": row["angle"],
+            "is_header": int("Head" in q_names),
+            "is_big_chance": int("BigChance" in q_names),
+            "is_penalty": int("Penalty" in q_names),
+            "is_counter": int("FastBreak" in q_names),
+            "is_right_foot": int("RightFoot" in q_names),
+            "is_left_foot": int("LeftFoot" in q_names),
+            "is_from_corner": int("FromCorner" in q_names),
+            "is_volley": int("Volley" in q_names),
+            "is_first_touch": int("FirstTouch" in q_names),
+        }
+        return pd.Series([feats[f] for f in XG_MODEL_FEATURES], index=XG_MODEL_FEATURES)
+    except:
+        return pd.Series([0] * len(XG_MODEL_FEATURES), index=XG_MODEL_FEATURES)
 
 
 def load_shot_features() -> pd.DataFrame:
@@ -314,8 +346,19 @@ def build_prediction_payload(match_row: pd.Series, filtered_events: pd.DataFrame
     likely_label = {"H": home_team, "D": "Empate", "A": away_team}[likely_code]
     likely_goal_team = home_team if pressure_home_share >= pressure_away_share else away_team
 
+    # Calcular Odds y Log-Odds para el usuario
+    # Evitar divisiones por cero con un pequeño epsilon
+    eps = 1e-6
+    metrics = {}
+    for code, p in probs.items():
+        p_adj = np.clip(p, eps, 1 - eps)
+        odds = p_adj / (1 - p_adj)
+        log_odds = np.log(odds)
+        metrics[code] = {"odds": float(odds), "log_odds": float(log_odds)}
+
     return {
         "probabilities": probs,
+        "metrics": metrics, # Nuevas métricas añadidas
         "likely_winner": likely_label,
         "expected_goals": comps["expected_goals"],
         "goal_pressure_team": likely_goal_team,
@@ -325,46 +368,61 @@ def build_prediction_payload(match_row: pd.Series, filtered_events: pd.DataFrame
 
 def draw_pitch_base() -> go.Figure:
     fig = go.Figure()
-    stripe_colors = ["#143d35", "#18483d", "#143d35", "#18483d", "#143d35"]
-    for idx, color in enumerate(stripe_colors):
+    
+    # Patrón de césped broadcast (Verde vibrante con degradado sutil)
+    for x in range(0, 100, 10):
+        color = "#1d5c41" if (x // 10) % 2 == 0 else "#246b4c"
         fig.add_shape(
-            type="rect",
-            x0=idx * 20,
-            x1=(idx + 1) * 20,
-            y0=0,
-            y1=100,
-            line=dict(width=0),
-            fillcolor=color,
-            layer="below",
+            type="rect", x0=x, x1=x+10, y0=0, y1=100,
+            line=dict(width=0), fillcolor=color, layer="below"
         )
 
+    # Marcadores reglamentarios de alta visibilidad
+    line_cfg = dict(color="white", width=3)
+    
     shapes = [
-        dict(type="rect", x0=0, y0=0, x1=100, y1=100, line=dict(color="#f8f4ea", width=2)),
-        dict(type="line", x0=50, y0=0, x1=50, y1=100, line=dict(color="#f8f4ea", width=2)),
-        dict(type="circle", x0=40.85, y0=40.85, x1=59.15, y1=59.15, line=dict(color="#f8f4ea", width=2)),
-        dict(type="rect", x0=0, y0=21.1, x1=16.5, y1=78.9, line=dict(color="#f8f4ea", width=2)),
-        dict(type="rect", x0=83.5, y0=21.1, x1=100, y1=78.9, line=dict(color="#f8f4ea", width=2)),
-        dict(type="rect", x0=0, y0=36.8, x1=5.5, y1=63.2, line=dict(color="#f8f4ea", width=2)),
-        dict(type="rect", x0=94.5, y0=36.8, x1=100, y1=63.2, line=dict(color="#f8f4ea", width=2)),
+        # Perímetro y Línea central
+        dict(type="rect", x0=0, y0=0, x1=100, y1=100, line=line_cfg),
+        dict(type="line", x0=50, y0=0, x1=50, y1=100, line=line_cfg),
+        # Círculo central y Punto central
+        dict(type="circle", x0=40.85, y0=40.85, x1=59.15, y1=59.15, line=line_cfg),
+        dict(type="circle", x0=49.6, y0=49.6, x1=50.4, y1=50.4, fillcolor="white", line=dict(width=0)),
+        # Áreas Grandes
+        dict(type="rect", x0=0, y0=21.1, x1=16.5, y1=78.9, line=line_cfg),
+        dict(type="rect", x0=83.5, y0=21.1, x1=100, y1=78.9, line=line_cfg),
+        # Áreas Pequeñas
+        dict(type="rect", x0=0, y0=36.8, x1=5.5, y1=63.2, line=line_cfg),
+        dict(type="rect", x0=94.5, y0=36.8, x1=100, y1=63.2, line=line_cfg),
+        # Puntos Penales
+        dict(type="circle", x0=10.6, y0=49.6, x1=11.4, y1=50.4, fillcolor="white", line=dict(width=0)),
+        dict(type="circle", x0=88.6, y0=49.6, x1=89.4, y1=50.4, fillcolor="white", line=dict(width=0)),
+        # Semicírculos de área (La "D")
+        dict(type="path", path="M 16.5,42.7 A 9.15,9.15 0 0,1 16.5,57.3", line=line_cfg),
+        dict(type="path", path="M 83.5,42.7 A 9.15,9.15 0 0,0 83.5,57.3", line=line_cfg),
     ]
+    
+    # Arcos de Córner
+    corner_size = 3.0
+    shapes.extend([
+        dict(type="path", path=f"M 0,{corner_size} A {corner_size},{corner_size} 0 0,0 {corner_size},0", line=line_cfg),
+        dict(type="path", path=f"M 0,{100-corner_size} A {corner_size},{corner_size} 0 0,1 {corner_size},100", line=line_cfg),
+        dict(type="path", path=f"M 100,{corner_size} A {corner_size},{corner_size} 0 0,1 {100-corner_size},0", line=line_cfg),
+        dict(type="path", path=f"M 100,{100-corner_size} A {corner_size},{corner_size} 0 0,0 {100-corner_size},100", line=line_cfg),
+    ])
+
     fig.update_layout(
         shapes=shapes,
-        paper_bgcolor="#0f1723",
-        plot_bgcolor="#143d35",
-        xaxis=dict(range=[-4, 104], visible=False),
-        yaxis=dict(range=[-10, 110], visible=False, scaleanchor="x", scaleratio=0.65),
+        paper_bgcolor="#081018",
+        plot_bgcolor="#1d5c41",
+        xaxis=dict(range=[-3, 103], visible=False),
+        yaxis=dict(range=[-6, 106], visible=False, scaleanchor="x", scaleratio=0.68),
         hovermode="closest",
-        height=850,
+        height=680,
         legend=dict(
-            orientation="h",
-            yanchor="bottom",
-            y=1.01,
-            xanchor="left",
-            x=0.0,
-            bgcolor="rgba(15,23,35,0.88)",
-            font=dict(color="#f8f4ea"),
+            orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1,
+            bgcolor="rgba(0,0,0,0)", font=dict(color="white", size=11)
         ),
-        margin=dict(l=0, r=0, t=10, b=10),
+        margin=dict(l=5, r=5, t=5, b=5),
     )
     return fig
 
@@ -397,15 +455,8 @@ def filter_match_events(
     if len(frame) > max_steps:
         sampled_idx = np.linspace(0, len(frame) - 1, max_steps).astype(int)
         frame = frame.iloc[sampled_idx].copy()
-        
-    # Attach xG if available
-    if not frame.empty and "distance" in frame.columns:
-        # Note: events usually don't have all xG features, 
-        # but I'll try to use what's there or default to 0.05
-        frame["xg"] = 0.05 
-    elif not frame.empty:
-        frame["xg"] = np.where(frame["is_shot"], 0.12, 0.0)
-        
+    
+    # xG is now expected to be pre-calculated in raw_events before filtering
     return frame
 
 
@@ -484,19 +535,24 @@ def build_replay_figure(events: pd.DataFrame, trail_length: int = 8) -> go.Figur
 
     def action_points(event: pd.Series) -> list[go.Scatter]:
         symbol = "star" if bool(event["is_goal"]) else ("diamond" if bool(event["is_shot"]) else "circle")
+        # Escalar tamaño por xG si es tiro, de lo contrario tamaño base
+        xg_val = float(event.get("xg", 0.05))
+        marker_size = 14 + (xg_val * 25) # Escala dinámica
+        
         common = [
             event["team_name"],
             event["player_name"],
             event["event_type"],
             event["outcome_label"],
             event["time_label"],
+            f"{xg_val:.2f}"
         ]
         start = go.Scatter(
             x=[event["x_plot"]],
             y=[event["y_plot"]],
             mode="markers",
             marker=dict(
-                size=14,
+                size=marker_size - 2,
                 color=team_colors.get(event["team_name"], "#ffd166"),
                 line=dict(color="#f8f4ea", width=1.4),
                 symbol="circle",
@@ -507,7 +563,8 @@ def build_replay_figure(events: pd.DataFrame, trail_length: int = 8) -> go.Figur
                 "Team: %{customdata[0]}<br>"
                 "Action: %{customdata[2]}<br>"
                 "Outcome: %{customdata[3]}<br>"
-                "Time: %{customdata[4]}<extra></extra>"
+                "Time: %{customdata[4]}<br>"
+                "xG: %{customdata[5]}<extra></extra>"
             ),
             name="Start",
         )
@@ -516,7 +573,7 @@ def build_replay_figure(events: pd.DataFrame, trail_length: int = 8) -> go.Figur
             y=[event["end_y_plot"]],
             mode="markers+text",
             marker=dict(
-                size=15,
+                size=marker_size,
                 color=team_colors.get(event["team_name"], "#ffd166"),
                 line=dict(color="#081018", width=1.4),
                 symbol=symbol,
@@ -530,7 +587,8 @@ def build_replay_figure(events: pd.DataFrame, trail_length: int = 8) -> go.Figur
                 "Team: %{customdata[0]}<br>"
                 "Action: %{customdata[2]}<br>"
                 "Outcome: %{customdata[3]}<br>"
-                "Time: %{customdata[4]}<extra></extra>"
+                "Time: %{customdata[4]}<br>"
+                "xG: %{customdata[5]}<extra></extra>"
             ),
             name="End",
         )
@@ -622,6 +680,7 @@ def build_replay_figure(events: pd.DataFrame, trail_length: int = 8) -> go.Figur
                 "steps": slider_steps,
             }
         ],
+        margin=dict(l=10, r=10, t=10, b=5),
     )
     return fig
 
@@ -657,6 +716,57 @@ def build_momentum_bars(events: pd.DataFrame) -> list[html.Div]:
             )
         )
     return rows
+
+
+def build_xg_timeline_figure(events: pd.DataFrame, home_team: str, away_team: str) -> go.Figure:
+    fig = go.Figure()
+    if events.empty:
+        return fig
+    
+    # Asegurar que el xG acumulado empiece en 0 al minuto 0
+    df = events.sort_values("clock_seconds").copy()
+    
+    for team, color in zip([home_team, away_team], [TEAM_COLORS[0], TEAM_COLORS[1]]):
+        team_df = df[df["team_name"] == team].copy()
+        if team_df.empty:
+            # Añadir un punto inicial y final incluso si no hay tiros para que la leyenda sea visible
+            fig.add_trace(go.Scatter(
+                x=[0, 95],
+                y=[0, 0],
+                mode="lines",
+                line=dict(shape="hv", width=1, color=color, dash="dot"),
+                name=f"xG {team} (Sin tiros)",
+                hovertemplate=f"{team}: 0.00 xG<extra></extra>"
+            ))
+            continue
+            
+        team_df["accum_xg"] = team_df["xg"].cumsum()
+        
+        # Asegurar valores no vacíos y tipos nativos
+        times = [0] + [int(m) for m in team_df["minute"].tolist()] + [95]
+        values = [0.0] + [float(v) for v in team_df["accum_xg"].tolist()] + [float(team_df["accum_xg"].iloc[-1])]
+        
+        fig.add_trace(go.Scatter(
+            x=times,
+            y=values,
+            mode="lines",
+            line=dict(shape="hv", width=3, color=color),
+            name=f"xG {team}",
+            fill="tozeroy",
+            hovertemplate="Minuto: %{x}<br>xG Acumulado: %{y:.2f}<extra></extra>"
+        ))
+
+    fig.update_layout(
+        paper_bgcolor="#0f1723",
+        plot_bgcolor="rgba(0,0,0,0)",
+        xaxis=dict(title="Minuto", range=[0, 95], gridcolor="rgba(255,255,255,0.05)", zeroline=False),
+        yaxis=dict(title="xG Acumulado", gridcolor="rgba(255,255,255,0.05)", zeroline=False),
+        margin=dict(l=20, r=20, t=10, b=30),
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1, font=dict(color="#f8f4ea")),
+        height=240,
+        font=dict(color="#f8f4ea")
+    )
+    return fig
 
 
 app = Dash(
@@ -697,81 +807,112 @@ app.layout = html.Div(
                     className="left-rail panel",
                     children=[
                         html.H3("Sala de control", className="panel-title"),
-                        html.Label("Modo de Análisis", className="control-label"),
-                        dcc.RadioItems(
-                            id="mode-toggle",
-                            options=[
-                                {"label": "Repetición Histórica", "value": "historical"},
-                                {"label": "Simulador de Partido", "value": "simulator"},
-                            ],
-                            value="historical",
-                            className="radio-group",
-                            inputStyle={"marginRight": "8px"},
-                        ),
-                        html.Div(
-                            id="historical-controls",
+                        
+                        # Grupo 1: Análisis
+                        html.Details(
+                            className="control-group",
+                            open=True,
                             children=[
-                                html.Label("Partido", className="control-label"),
-                                dcc.Dropdown(
-                                    id="match-select",
-                                    options=MATCH_OPTIONS,
-                                    value=MATCH_OPTIONS[0]["value"],
-                                    clearable=False,
-                                ),
-                            ],
+                                html.Summary("📐 Configuración de Análisis", className="group-header"),
+                                html.Div(className="group-content", children=[
+                                    html.Label("Modo de Análisis", className="control-label"),
+                                    dcc.RadioItems(
+                                        id="mode-toggle",
+                                        options=[
+                                            {"label": "Repetición Histórica", "value": "historical"},
+                                            {"label": "Simulador de Partido", "value": "simulator"},
+                                        ],
+                                        value="historical",
+                                        className="radio-group",
+                                        inputStyle={"marginRight": "8px"},
+                                    ),
+                                    html.Div(
+                                        id="historical-controls",
+                                        children=[
+                                            html.Label("Partido", className="control-label"),
+                                            dcc.Dropdown(
+                                                id="match-select",
+                                                options=MATCH_OPTIONS,
+                                                value=MATCH_OPTIONS[0]["value"],
+                                                clearable=False,
+                                            ),
+                                        ],
+                                    ),
+                                    html.Div(
+                                        id="simulator-controls",
+                                        style={"display": "none"},
+                                        children=[
+                                            html.Label("Equipo Local", className="control-label"),
+                                            dcc.Dropdown(
+                                                id="sim-home-team",
+                                                options=[{"label": t, "value": t} for t in ALL_TEAMS],
+                                                value=ALL_TEAMS[0],
+                                                clearable=False,
+                                            ),
+                                            html.Label("Equipo Visitante", className="control-label"),
+                                            dcc.Dropdown(
+                                                id="sim-away-team",
+                                                options=[{"label": t, "value": t} for t in ALL_TEAMS],
+                                                value=ALL_TEAMS[1],
+                                                clearable=False,
+                                            ),
+                                            html.Label("Árbitro", className="control-label"),
+                                            dcc.Dropdown(
+                                                id="sim-referee",
+                                                options=[{"label": r, "value": r} for r in GOAL_MODELS["referees"]],
+                                                value=GOAL_MODELS["referees"][0],
+                                                clearable=False,
+                                            ),
+                                        ],
+                                    ),
+                                ])
+                            ]
                         ),
-                        html.Div(
-                            id="simulator-controls",
-                            style={"display": "none"},
+                        
+                        # Grupo 2: Filtros
+                        html.Details(
+                            className="control-group",
                             children=[
-                                html.Label("Equipo Local", className="control-label"),
-                                dcc.Dropdown(
-                                    id="sim-home-team",
-                                    options=[{"label": t, "value": t} for t in ALL_TEAMS],
-                                    value=ALL_TEAMS[0],
-                                    clearable=False,
-                                ),
-                                html.Label("Equipo Visitante", className="control-label"),
-                                dcc.Dropdown(
-                                    id="sim-away-team",
-                                    options=[{"label": t, "value": t} for t in ALL_TEAMS],
-                                    value=ALL_TEAMS[1],
-                                    clearable=False,
-                                ),
-                                html.Label("Árbitro", className="control-label"),
-                                dcc.Dropdown(
-                                    id="sim-referee",
-                                    options=[{"label": r, "value": r} for r in GOAL_MODELS["referees"]],
-                                    value=GOAL_MODELS["referees"][0],
-                                    clearable=False,
-                                ),
-                            ],
+                                html.Summary("🔍 Filtros Técnicos", className="group-header"),
+                                html.Div(className="group-content", children=[
+                                    html.Label("Equipos", className="control-label"),
+                                    dcc.Dropdown(id="team-filter", multi=True),
+                                    html.Label("Jugador destacado", className="control-label"),
+                                    dcc.Dropdown(id="player-filter", clearable=False),
+                                    html.Label("Tipos de evento", className="control-label"),
+                                    dcc.Dropdown(id="event-type-filter", multi=True),
+                                    html.Label("Ventana de tiempo (min)", className="control-label"),
+                                    dcc.RangeSlider(id="minute-range", min=0, max=120, step=1, value=[0, 95]),
+                                ])
+                            ]
                         ),
-                        html.Label("Equipos", className="control-label"),
-                        dcc.Dropdown(id="team-filter", multi=True),
-                        html.Label("Jugador destacado", className="control-label"),
-                        dcc.Dropdown(id="player-filter", clearable=False),
-                        html.Label("Tipos de evento", className="control-label"),
-                        dcc.Dropdown(id="event-type-filter", multi=True),
-                        html.Label("Ventana de tiempo (min)", className="control-label"),
-                        dcc.RangeSlider(id="minute-range", min=0, max=120, step=1, value=[0, 95]),
-                        html.Label("Pasos de repetición", className="control-label"),
-                        dcc.Slider(id="max-steps", min=20, max=220, step=10, value=80),
-                        html.Label("Longitud de rastro", className="control-label"),
-                        dcc.Slider(id="trail-length", min=2, max=20, step=1, value=8),
-                        html.Div(
-                            className="switch-row",
+                        
+                        # Grupo 3: Repetición
+                        html.Details(
+                            className="control-group",
                             children=[
-                                dcc.Checklist(
-                                    id="replay-flags",
-                                    options=[
-                                        {"label": "Solo exitosos", "value": "successful"},
-                                        {"label": "Incluir Inicio/Fin", "value": "stops"},
-                                    ],
-                                    value=[],
-                                    inputStyle={"marginRight": "8px", "marginLeft": "0"},
-                                )
-                            ],
+                                html.Summary("🎥 Estética de Repetición", className="group-header"),
+                                html.Div(className="group-content", children=[
+                                    html.Label("Pasos de repetición", className="control-label"),
+                                    dcc.Slider(id="max-steps", min=20, max=220, step=10, value=80),
+                                    html.Label("Longitud de rastro", className="control-label"),
+                                    dcc.Slider(id="trail-length", min=2, max=20, step=1, value=8),
+                                    html.Div(
+                                        className="switch-row",
+                                        children=[
+                                            dcc.Checklist(
+                                                id="replay-flags",
+                                                options=[
+                                                    {"label": "Solo exitosos", "value": "successful"},
+                                                    {"label": "Incluir Inicio/Fin", "value": "stops"},
+                                                ],
+                                                value=[],
+                                                inputStyle={"marginRight": "8px", "marginLeft": "0"},
+                                            )
+                                        ],
+                                    ),
+                                ])
+                            ]
                         ),
                     ],
                 ),
@@ -780,33 +921,43 @@ app.layout = html.Div(
                     children=[
                         html.Div(id="match-header", className="match-header panel"),
                         html.Div(id="prediction-strip", className="prediction-strip"),
+                        
+                        # Panel de Repetición (Campo Pros) - AHORA ARRIBA
                         html.Div(
-                            className="center-panels",
+                            className="replay-panel panel",
                             children=[
                                 html.Div(
-                                    className="replay-panel panel",
+                                    className="panel-head",
                                     children=[
-                                        html.Div(
-                                            className="panel-head",
-                                            children=[
-                                                html.H3("Repetición en vivo", className="panel-title"),
-                                                html.Div("Emulación de partido basada en eventos", className="panel-caption"),
-                                            ],
-                                        ),
-                                        dcc.Graph(id="replay-graph", config={"displaylogo": False}, className="replay-graph"),
+                                        html.H3("Repetición Táctica", className="panel-title"),
+                                        html.Div("Simulación de eventos sobre campo reglamentario", className="panel-caption"),
                                     ],
                                 ),
+                                dcc.Graph(id="replay-graph", config={"displaylogo": False}, className="replay-graph"),
+                            ],
+                        ),
+                        
+                        # Evolución de xG - AHORA ABAJO
+                        html.Div(
+                            className="panel compact-panel",
+                            id="timeline-container",
+                            style={"marginTop": "0px"},
+                            children=[
+                                html.H3("Evolución de xG (Control Comercial)", className="panel-title"),
+                                dcc.Graph(id="xg-timeline-graph", config={"displaylogo": False}, className="timeline-graph")
+                            ]
+                        ),
+
+                        # Resumen y Momentum
+                        html.Div(
+                            className="summary-grid",
+                            children=[
+                                html.Div(id="summary-cards", className="summary-cards"),
                                 html.Div(
-                                    className="summary-grid",
+                                    className="panel compact-panel",
                                     children=[
-                                        html.Div(id="summary-cards", className="summary-cards"),
-                                        html.Div(
-                                            className="panel compact-panel",
-                                            children=[
-                                                html.H3("Impulso (Momentum)", className="panel-title"),
-                                                html.Div(id="momentum-bars", className="momentum-bars"),
-                                            ],
-                                        ),
+                                        html.H3("Impulso (Momentum)", className="panel-title"),
+                                        html.Div(id="momentum-bars", className="momentum-bars"),
                                     ],
                                 ),
                             ],
@@ -956,6 +1107,7 @@ def update_filters(mode: str, match_id: int, sim_home: str, sim_away: str):
     Output("match-header", "children"),
     Output("prediction-strip", "children"),
     Output("replay-graph", "figure"),
+    Output("xg-timeline-graph", "figure"),
     Output("summary-cards", "children"),
     Output("momentum-bars", "children"),
     Output("recent-events-table", "data"),
@@ -1002,6 +1154,11 @@ def update_dashboard(
         proj = simulate_match_outlook(sim_home, sim_away, sim_referee)
         prediction = {
             "probabilities": proj["probabilities"],
+            "metrics": {
+                "H": {"odds": 1.0, "log_odds": 0.0},
+                "D": {"odds": 1.0, "log_odds": 0.0},
+                "A": {"odds": 1.0, "log_odds": 0.0}
+            },
             "likely_winner": proj["likely_winner"],
             "expected_goals": proj["total_goals"],
             "goal_pressure_team": sim_home if proj["total_goals"] > 1.5 else sim_away,
@@ -1012,6 +1169,35 @@ def update_dashboard(
         season_label = "Modo Simulación"
         referee_label = sim_referee
         result_label = "Proyección"
+
+    # Pre-calcular xG para todos los eventos (necesario para el timeline)
+    raw_events = raw_events.copy()
+    
+    # Asegurar que 'is_shot' e 'is_goal' sean booleanos
+    raw_events["is_shot"] = raw_events["is_shot"].astype(bool)
+    raw_events["is_goal"] = raw_events["is_goal"].astype(bool)
+    
+    shots_mask = raw_events["is_shot"] == True
+    if shots_mask.any():
+        try:
+            shot_events = raw_events[shots_mask].copy()
+            X_shots = shot_events.apply(extract_xg_features, axis=1)
+            raw_events.loc[shots_mask, "xg"] = XG_MODEL.predict_proba(X_shots)[:, 1].astype(float)
+        except Exception:
+            raw_events.loc[shots_mask, "xg"] = 0.05
+    
+    raw_events["xg"] = raw_events.get("xg", pd.Series([0.0]*len(raw_events))).fillna(0.0).astype(float)
+
+    if mode == "simulator":
+        # Recalcular métricas basadas en las probabilidades del modelo local para el simulador
+        eps = 1e-6
+        metrics = {}
+        for code, p in prediction["probabilities"].items():
+            p_adj = np.clip(float(p), eps, 1 - eps)
+            odds = p_adj / (1 - p_adj)
+            log_odds = np.log(odds)
+            metrics[code] = {"odds": float(odds), "log_odds": float(log_odds)}
+        prediction["metrics"] = metrics
 
     filtered = filter_match_events(
         df=raw_events,
@@ -1085,6 +1271,35 @@ def update_dashboard(
                 ),
             ],
         ),
+        html.Div(
+            className="prediction-card metrics-card",
+            children=[
+                html.Div([
+                    "Métricas de Modelo",
+                    html.Span("?", className="info-icon", title="L (Logit): Convencimiento del modelo (>0 fuerte, <0 débil). O (Odds): Cuota inversa de probabilidad.")
+                ], className="prediction-label"),
+                html.Div(
+                    className="metrics-grid",
+                    children=[
+                        html.Div([
+                            html.Div("Local", className="metric-tag"),
+                            html.Div(f"L: {prediction['metrics']['H']['log_odds']:.2f}", className="metric-val"),
+                            html.Div(f"O: {prediction['metrics']['H']['odds']:.2f}", className="metric-subval"),
+                        ], className="metric-col", **{"data-description": "Victoria Local: Refleja el dominio territorial y eficacia histórica frente al rival en este enfrentamiento."}),
+                        html.Div([
+                            html.Div("Empate", className="metric-tag"),
+                            html.Div(f"L: {prediction['metrics']['D']['log_odds']:.2f}", className="metric-val"),
+                            html.Div(f"O: {prediction['metrics']['D']['odds']:.2f}", className="metric-subval"),
+                        ], className="metric-col", **{"data-description": "Probabilidad de Empate: Indica un equilibrio táctico donde las defensas suelen imponerse a los ataques."}),
+                        html.Div([
+                            html.Div("Vis.", className="metric-tag"),
+                            html.Div(f"L: {prediction['metrics']['A']['log_odds']:.2f}", className="metric-val"),
+                            html.Div(f"O: {prediction['metrics']['A']['odds']:.2f}", className="metric-subval"),
+                        ], className="metric-col", **{"data-description": "Victoria Visitante: Basado en el rendimiento fuera de casa y vulnerabilidades defensivas del local detectadas."}),
+                    ]
+                ),
+            ],
+        ),
     ]
 
     summary_cards = [
@@ -1112,6 +1327,7 @@ def update_dashboard(
         header,
         prediction_strip,
         build_replay_figure(filtered, trail_length=trail_length),
+        build_xg_timeline_figure(raw_events, header_teams[0], header_teams[1]),
         summary_cards,
         build_momentum_bars(filtered),
         recent,
