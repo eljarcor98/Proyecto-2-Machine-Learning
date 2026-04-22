@@ -28,17 +28,19 @@ Hemos validado el desempeño contra el baseline del 88%:
 3. `notebooks/xg_baseline_naive_bayes.ipynb`: Verificación del baseline del 88%.
 4. `notebooks/xg_threshold_optimization.ipynb`: Análisis de Precision vs Recall.
 
-## 🏆 Últimas Mejoras (Dash V2)
-- **Simulador de Partidos**: Nuevo modo que permite proyectar resultados de cualquier combinación de equipos, incluso si no han jugado recientemente.
-- **Visualización Pro**: Se aumentó el tamaño del campo de juego a 850px y se integraron los valores de **xG** (Expected Goals) directamente en la interfaz interactiva.
-- **Sintetizador de Eventos**: Generación de hilos de eventos minuto a minuto para simulaciones basadas en perfiles históricos.
+## 🏆 Últimas Mejoras (Dash V3 - Broadcast Edition)
+- **Campo de Juego Ultra-Pro**: Rediseño total con patrón de césped broadcast, marcas reglamentarias completas (Arco D, Puntos Penales, Círculos) y líneas de alta definición.
+- **Visualización de xG Escalada**: Los marcadores de eventos en el campo ahora escalan su tamaño dinámicamente según el valor de **xG**, permitiendo distinguir visualmente las grandes ocasiones.
+- **Simulador de Partidos Dinámico**: Modo "Simulator" que permite proyectar resultados entre cualquier equipo de la liga, calculando Log-Odds y Probabilidades en tiempo real.
+- **Diálogos Interactivos (Popovers)**: Implementación de cuadros de diálogo flotantes con estilo "glassmorphism" que explican el significado técnico de las métricas (Logit/Odds) al pasar el mouse.
+- **Layout de Alta Densidad**: Reorganización del dashboard para maximizar el área de análisis, eliminando espacios vacíos en los gráficos de xG y Momentum.
 
 ## 🚀 Cómo ejecutar
-Para regenerar las características y ver la optimización:
+1. Asegúrate de tener las dependencias instaladas: `.venv/Scripts/pip install -r requirements.txt` (si existe).
+2. Ejecuta la aplicación:
 ```bash
-python src/features/build_features.py
-python scripts/optimize_threshold.py
+.venv/Scripts/python.exe src/app_dash.py
 ```
 
 ---
-*Documentado por Antigravity AI para el equipo de Arnold.*
+*Documentado por Antigravity AI para el equipo de Arnold (@eljarcor98).*
