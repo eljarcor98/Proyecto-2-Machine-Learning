@@ -35,7 +35,10 @@ def build_features():
             return {}
 
     # Extraer qualifiers comunes como columnas booleanas
-    qs = df_shots['qualifiers'].apply(parse_qualifiers)
+    if 'qualifiers' in df_shots.columns:
+        qs = df_shots['qualifiers'].apply(parse_qualifiers)
+    else:
+        qs = pd.Series([{} for _ in range(len(df_shots))], index=df_shots.index)
     
     df_shots['is_header'] = qs.apply(lambda x: 'Head' in x).astype(int)
     df_shots['is_big_chance'] = qs.apply(lambda x: 'BigChance' in x).astype(int)

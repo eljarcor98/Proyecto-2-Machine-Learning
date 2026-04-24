@@ -353,7 +353,7 @@ input[type="checkbox"] {
 
 .panel-head {
   display: flex;
-  align-items: end;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 10px;
@@ -562,14 +562,14 @@ input[type="checkbox"] {
   padding-bottom: 5px;
 }
 
-#timeline-container .panel-title {
+.panel-title {
   color: #06d6a0;
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-#timeline-container .panel-title::before {
+.panel-title::before {
   content: "";
   display: inline-block;
   width: 8px;
@@ -684,20 +684,21 @@ input[type="checkbox"] {
 
 /* Compactación de Gráficos */
 #timeline-container {
-  padding-bottom: 0px !important;
-  margin-bottom: 0px !important;
+  padding-bottom: 15px !important;
+  margin-bottom: 15px !important;
 }
 
 #timeline-container .panel-title {
-  margin-bottom: 4px !important;
+  margin-bottom: 8px !important;
 }
 
 .timeline-graph {
-  margin-top: -10px !important;
+  margin-top: 0px !important;
+  min-height: 320px !important;
 }
 
 .replay-graph {
-  margin-top: -15px !important;
+  margin-top: 0px !important;
 }
 
 .compact-panel {
