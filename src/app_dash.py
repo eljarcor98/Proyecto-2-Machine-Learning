@@ -57,9 +57,13 @@ def load_events() -> pd.DataFrame:
         "end_y",
         "is_shot",
         "is_goal",
-        "qualifiers",
     ]
-    events = pd.read_csv(RAW_DIR / "events.csv", usecols=usecols)
+    
+    # Manejar eventos sin la columna qualifiers
+    try:
+        events = pd.read_csv(RAW_DIR / "events.csv", usecols=usecols + ["qualifiers"])
+    except ValueError:
+        events = pd.read_csv(RAW_DIR / "events.csv", usecols=usecols)
     events = events.dropna(subset=["x", "y"]).copy()
     events["minute"] = pd.to_numeric(events["minute"], errors="coerce").fillna(0).astype(int)
     events["second"] = pd.to_numeric(events["second"], errors="coerce").fillna(0).astype(int)
@@ -757,13 +761,13 @@ def build_xg_timeline_figure(events: pd.DataFrame, home_team: str, away_team: st
         ))
 
     fig.update_layout(
-        paper_bgcolor="#0f1723",
+        paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
         xaxis=dict(title="Minuto", range=[0, 95], gridcolor="rgba(255,255,255,0.05)", zeroline=False),
         yaxis=dict(title="xG Acumulado", gridcolor="rgba(255,255,255,0.05)", zeroline=False),
-        margin=dict(l=20, r=20, t=10, b=30),
+        margin=dict(l=40, r=20, t=40, b=40),
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1, font=dict(color="#f8f4ea")),
-        height=240,
+        height=320,
         font=dict(color="#f8f4ea")
     )
     return fig
@@ -943,7 +947,13 @@ app.layout = html.Div(
                             id="timeline-container",
                             style={"marginTop": "0px"},
                             children=[
-                                html.H3("Evolución de xG (Control Comercial)", className="panel-title"),
+                                html.Div(
+                                    className="panel-head",
+                                    children=[
+                                        html.H3("Evolución de xG (Control Comercial)", className="panel-title"),
+                                        html.Div("Acumulado de Goles Esperados para análisis de riesgo en vivo", className="panel-caption"),
+                                    ],
+                                ),
                                 dcc.Graph(id="xg-timeline-graph", config={"displaylogo": False}, className="timeline-graph")
                             ]
                         ),
