@@ -22,7 +22,9 @@ def export():
     goal_models = fit_goal_models(matches)
     
     print("Entrenando Team Profiles...")
-    team_profiles = get_team_profiles(matches)
+    tp_df_dict = get_team_profiles(matches)
+    # Convertir DataFrames a diccionarios para quitar dependencias de pandas/pyarrow en este objeto
+    team_profiles = {k: v.to_dict('index') for k, v in tp_df_dict.items()}
     
     print("Entrenando xG Model...")
     xg_model = fit_xg_model()

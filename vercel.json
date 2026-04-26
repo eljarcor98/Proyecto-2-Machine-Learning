@@ -1,14 +1,5 @@
 {
-  "builds": [
-    {
-      "src": "src/app_dash.py",
-      "use": "@vercel/python"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "src/app_dash.py"
-    }
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/api/index.py" }
   ]
 }

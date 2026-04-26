@@ -1,0 +1,18 @@
+# Excluir carpetas pesadas que no se usan en producción
+notebooks/
+reports/
+scripts/
+venv/
+.venv/
+.git/
+.codex/
+data/raw/player_history.csv
+data/raw/history.csv
+data/processed/*.csv
+data/processed/*.json
+data/processed/*.parquet
+models/*.pkl.bak
+README.md
+README_AVANCES.md
+CONTRIBUTING.md
+LICENSE
