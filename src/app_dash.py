@@ -209,12 +209,39 @@ def fit_xg_model() -> Pipeline:
     return model
 
 
-MATCHES = load_matches()
-EVENTS = load_events()
-GOAL_MODELS = fit_goal_models(MATCHES)
-TEAM_PROFILES = get_team_profiles(MATCHES)
-ALL_TEAMS = sorted(MATCHES["home_team"].unique().tolist())
-XG_MODEL = fit_xg_model()
+import pickle
+
+MODELS_DIR = BASE_DIR / "models"
+
+def initialize_app_data():
+    global MATCHES, EVENTS, GOAL_MODELS, TEAM_PROFILES, ALL_TEAMS, XG_MODEL
+    
+    MATCHES = load_matches()
+    EVENTS = load_events()
+    
+    # Intentar cargar modelos pre-entrenados para Vercel (evita timeouts)
+    goal_models_path = MODELS_DIR / "goal_models.pkl"
+    xg_model_path = MODELS_DIR / "xg_model.pkl"
+    team_profiles_path = MODELS_DIR / "team_profiles.pkl"
+
+    if goal_models_path.exists() and xg_model_path.exists() and team_profiles_path.exists():
+        print("Cargando modelos pre-entrenados desde disco...")
+        with open(goal_models_path, "rb") as f:
+            GOAL_MODELS = pickle.load(f)
+        with open(xg_model_path, "rb") as f:
+            XG_MODEL = pickle.load(f)
+        with open(team_profiles_path, "rb") as f:
+            TEAM_PROFILES = pickle.load(f)
+    else:
+        print("Entrenando modelos en vivo (esto puede ser lento en Vercel)...")
+        GOAL_MODELS = fit_goal_models(MATCHES)
+        TEAM_PROFILES = get_team_profiles(MATCHES)
+        XG_MODEL = fit_xg_model()
+        
+    ALL_TEAMS = sorted(MATCHES["home_team"].unique().tolist())
+
+# Ejecutar inicialización al inicio
+initialize_app_data()
 
 
 def build_match_options(matches: pd.DataFrame) -> list[dict[str, str | int]]:
