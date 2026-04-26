@@ -265,10 +265,10 @@ def build_match_options(matches: pd.DataFrame) -> list[dict[str, str | int]]:
 
 
 def build_matchup_features(home: str, away: str, referee: str) -> pd.Series:
-    ha = TEAM_PROFILES["ha"].loc[home]
-    hd = TEAM_PROFILES["hd"].loc[home]
-    aa = TEAM_PROFILES["aa"].loc[away]
-    ad = TEAM_PROFILES["ad"].loc[away]
+    ha = TEAM_PROFILES["ha"][home]
+    hd = TEAM_PROFILES["hd"][home]
+    aa = TEAM_PROFILES["aa"][away]
+    ad = TEAM_PROFILES["ad"][away]
     
     odds = GOAL_MODELS["avg_odds"]
     row = {f: float((ha[f] + ad[f]) / 2) for f in HOME_FEATURES}
