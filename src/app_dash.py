@@ -213,11 +213,20 @@ import pickle
 
 MODELS_DIR = BASE_DIR / "models"
 
+EVENTS = None
+
+def get_events():
+    global EVENTS
+    if EVENTS is None:
+        print("Cargando eventos bajo demanda...")
+        EVENTS = load_events()
+    return EVENTS
+
 def initialize_app_data():
-    global MATCHES, EVENTS, GOAL_MODELS, TEAM_PROFILES, ALL_TEAMS, XG_MODEL
+    global MATCHES, GOAL_MODELS, TEAM_PROFILES, ALL_TEAMS, XG_MODEL
     
     MATCHES = load_matches()
-    EVENTS = load_events()
+    # No cargamos EVENTS aquí para ahorrar memoria al arranque
     
     # Intentar cargar modelos pre-entrenados para Vercel (evita timeouts)
     goal_models_path = MODELS_DIR / "goal_models.pkl"
@@ -1102,11 +1111,12 @@ def toggle_controls(mode: str):
     Input("sim-away-team", "value"),
 )
 def update_filters(mode: str, match_id: int, sim_home: str, sim_away: str):
+    events_df = get_events()
     if mode == "historical":
-        events = EVENTS.loc[EVENTS["match_id"] == int(match_id)].copy()
+        events = events_df.loc[events_df["match_id"] == int(match_id)].copy()
     else:
         # For simulator, show teams and players from both selected teams
-        events = EVENTS.loc[EVENTS["team_name"].isin([sim_home, sim_away])].copy()
+        events = events_df.loc[events_df["team_name"].isin([sim_home, sim_away])].copy()
 
     team_options = [{"label": team, "value": team} for team in sorted(events["team_name"].dropna().unique().tolist())]
     if mode == "simulator":
@@ -1177,8 +1187,9 @@ def update_dashboard(
     sim_referee: str,
 ):
     flags = flags or []
+    events_df = get_events()
     if mode == "historical":
-        raw_events = EVENTS.loc[EVENTS["match_id"] == int(match_id)]
+        raw_events = events_df.loc[events_df["match_id"] == int(match_id)]
         match_row = MATCHES.loc[MATCHES["id"] == int(match_id)].iloc[0]
         prediction = build_prediction_payload(match_row, raw_events)
         header_score = f"{int(match_row['fthg'])} - {int(match_row['ftag'])}"
