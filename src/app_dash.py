@@ -209,12 +209,48 @@ def fit_xg_model() -> Pipeline:
     return model
 
 
-MATCHES = load_matches()
-EVENTS = load_events()
-GOAL_MODELS = fit_goal_models(MATCHES)
-TEAM_PROFILES = get_team_profiles(MATCHES)
-ALL_TEAMS = sorted(MATCHES["home_team"].unique().tolist())
-XG_MODEL = fit_xg_model()
+import pickle
+
+MODELS_DIR = BASE_DIR / "models"
+
+EVENTS = None
+
+def get_events():
+    global EVENTS
+    if EVENTS is None:
+        print("Cargando eventos bajo demanda...")
+        EVENTS = load_events()
+    return EVENTS
+
+def initialize_app_data():
+    global MATCHES, GOAL_MODELS, TEAM_PROFILES, ALL_TEAMS, XG_MODEL
+    
+    MATCHES = load_matches()
+    # No cargamos EVENTS aquí para ahorrar memoria al arranque
+    
+    # Intentar cargar modelos pre-entrenados para Vercel (evita timeouts)
+    goal_models_path = MODELS_DIR / "goal_models.pkl"
+    xg_model_path = MODELS_DIR / "xg_model.pkl"
+    team_profiles_path = MODELS_DIR / "team_profiles.pkl"
+
+    if goal_models_path.exists() and xg_model_path.exists() and team_profiles_path.exists():
+        print("Cargando modelos pre-entrenados desde disco...")
+        with open(goal_models_path, "rb") as f:
+            GOAL_MODELS = pickle.load(f)
+        with open(xg_model_path, "rb") as f:
+            XG_MODEL = pickle.load(f)
+        with open(team_profiles_path, "rb") as f:
+            TEAM_PROFILES = pickle.load(f)
+    else:
+        print("Entrenando modelos en vivo (esto puede ser lento en Vercel)...")
+        GOAL_MODELS = fit_goal_models(MATCHES)
+        TEAM_PROFILES = get_team_profiles(MATCHES)
+        XG_MODEL = fit_xg_model()
+        
+    ALL_TEAMS = sorted(MATCHES["home_team"].unique().tolist())
+
+# Ejecutar inicialización al inicio
+initialize_app_data()
 
 
 def build_match_options(matches: pd.DataFrame) -> list[dict[str, str | int]]:
@@ -229,10 +265,10 @@ def build_match_options(matches: pd.DataFrame) -> list[dict[str, str | int]]:
 
 
 def build_matchup_features(home: str, away: str, referee: str) -> pd.Series:
-    ha = TEAM_PROFILES["ha"].loc[home]
-    hd = TEAM_PROFILES["hd"].loc[home]
-    aa = TEAM_PROFILES["aa"].loc[away]
-    ad = TEAM_PROFILES["ad"].loc[away]
+    ha = TEAM_PROFILES["ha"][home]
+    hd = TEAM_PROFILES["hd"][home]
+    aa = TEAM_PROFILES["aa"][away]
+    ad = TEAM_PROFILES["ad"][away]
     
     odds = GOAL_MODELS["avg_odds"]
     row = {f: float((ha[f] + ad[f]) / 2) for f in HOME_FEATURES}
@@ -1075,11 +1111,12 @@ def toggle_controls(mode: str):
     Input("sim-away-team", "value"),
 )
 def update_filters(mode: str, match_id: int, sim_home: str, sim_away: str):
+    events_df = get_events()
     if mode == "historical":
-        events = EVENTS.loc[EVENTS["match_id"] == int(match_id)].copy()
+        events = events_df.loc[events_df["match_id"] == int(match_id)].copy()
     else:
         # For simulator, show teams and players from both selected teams
-        events = EVENTS.loc[EVENTS["team_name"].isin([sim_home, sim_away])].copy()
+        events = events_df.loc[events_df["team_name"].isin([sim_home, sim_away])].copy()
 
     team_options = [{"label": team, "value": team} for team in sorted(events["team_name"].dropna().unique().tolist())]
     if mode == "simulator":
@@ -1150,8 +1187,9 @@ def update_dashboard(
     sim_referee: str,
 ):
     flags = flags or []
+    events_df = get_events()
     if mode == "historical":
-        raw_events = EVENTS.loc[EVENTS["match_id"] == int(match_id)]
+        raw_events = events_df.loc[events_df["match_id"] == int(match_id)]
         match_row = MATCHES.loc[MATCHES["id"] == int(match_id)].iloc[0]
         prediction = build_prediction_payload(match_row, raw_events)
         header_score = f"{int(match_row['fthg'])} - {int(match_row['ftag'])}"
